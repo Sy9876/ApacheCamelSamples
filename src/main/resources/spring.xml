@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:camel="http://camel.apache.org/schema/spring"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
+
+  <!-- 
+  	本机启动jetty监听8080端口，
+  	根据http请求中的参数[tomcat_port]，
+  	转发到目标tomcat的相应端口。 
+  	
+  	请求示例 1：
+  	    curl -i -u tomcat:tomcat http://127.0.0.1:8080/myCamelApp/manager/text/list?tomcat_port=8083
+  	
+  	    /myCamelApp 是camel的地址前缀
+  	    tomcat_port=8083 是给camel用来判断路由用的请求参数。会自动映射到 ${header.tomcat_port}
+  	    
+  	    
+  	请求示例 2：
+        curl -i -X POST -u tomcat:tomcat http://127.0.0.1:8080/myCamelApp/manager/text/list?tomcat_port=8089 -d 'a=1'
+        
+  	            端口8089不匹配既定路由，会进入otherwise，即输出的stdout。
+  	            输出的默认是body。GET请求的body为空。POST请求的body会显示出来。
+  	
+  -->
+
+  <camelContext id="myCamelContext" xmlns="http://camel.apache.org/schema/spring">
+    <route>
+      <from uri="jetty:http://0.0.0.0:8080/myCamelApp?matchOnUriPrefix=true"/>
+      <choice>
+      	<when>
+      		<simple>${header.tomcat_port} == 8083</simple>
+      		<to uri="jetty:http://127.0.0.1:8083/?bridgeEndpoint=true&amp;throwExceptionOnFailure=false" />
+      	</when>
+      	<when>
+      		<simple>${header.tomcat_port} == 8084</simple>
+      		<to uri="jetty:http://127.0.0.1:8084/?bridgeEndpoint=true&amp;throwExceptionOnFailure=false" />
+      	</when>
+      	<when>
+      		<simple>${header.tomcat_port} == 8087</simple>
+      		<to uri="jetty:http://127.0.0.1:8087/?bridgeEndpoint=true&amp;throwExceptionOnFailure=false" />
+      	</when>
+      	<otherwise>
+      		<to uri="stream:out"/>
+      		<stop />
+      	</otherwise>
+      </choice>
+    </route>
+  </camelContext>
+
+</beans>
